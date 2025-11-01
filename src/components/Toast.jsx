@@ -1,5 +1,5 @@
-import { CheckCircle, XCircle, Info, X } from "lucide-react";
 import { useEffect } from "react";
+import { CheckCircle, XCircle, Info, X } from "lucide-react";
 
 const Toast = ({ message, type = "success", onClose, duration = 3000 }) => {
   useEffect(() => {
@@ -24,7 +24,7 @@ const Toast = ({ message, type = "success", onClose, duration = 3000 }) => {
 
   return (
     <div
-      className={`fixed top-6 right-6 z-50 flex items-center space-x-3 px-4 py-3 rounded-xl border shadow-lg ${styles[type]} animate-slide-in`}
+      className={`fixed top-6 right-6 z-50 flex items-center space-x-3 px-4 py-3 rounded-xl border shadow-lg ${styles[type]}`}
     >
       {icons[type]}
       <span className="text-sm font-medium">{message}</span>

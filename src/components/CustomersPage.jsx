@@ -4,12 +4,14 @@ import {
   Edit2,
   Trash2,
   Eye,
-  User,
+  UserCircle,
   CheckCircle,
   XCircle,
   Info,
   X,
   AlertTriangle,
+  Clock,
+  Calendar,
 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -106,11 +108,38 @@ const ConfirmModal = ({
   );
 };
 
-const UsersPage = ({ users, onAdd, onEdit, onDelete, onView }) => {
+const calculateCustomerTime = (customerSinceDate) => {
+  const startDate = new Date(customerSinceDate);
+  const currentDate = new Date();
+
+  const years = currentDate.getFullYear() - startDate.getFullYear();
+  const months = currentDate.getMonth() - startDate.getMonth();
+
+  let totalMonths = years * 12 + months;
+
+  if (totalMonths < 1) {
+    return "Menos de 1 mês";
+  } else if (totalMonths < 12) {
+    return `${totalMonths} ${totalMonths === 1 ? "mês" : "meses"}`;
+  } else {
+    const fullYears = Math.floor(totalMonths / 12);
+    const remainingMonths = totalMonths % 12;
+
+    if (remainingMonths === 0) {
+      return `${fullYears} ${fullYears === 1 ? "ano" : "anos"}`;
+    } else {
+      return `${fullYears} ${
+        fullYears === 1 ? "ano" : "anos"
+      } e ${remainingMonths} ${remainingMonths === 1 ? "mês" : "meses"}`;
+    }
+  }
+};
+
+const CustomersPage = ({ customers, onAdd, onEdit, onDelete, onView }) => {
   const [toast, setToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
-    user: null,
+    customer: null,
   });
 
   const showToast = (message, type = "success") => {
@@ -122,31 +151,30 @@ const UsersPage = ({ users, onAdd, onEdit, onDelete, onView }) => {
     showToast("Abrindo formulário de cadastro", "info");
   };
 
-  const handleView = (user) => {
-    onView(user);
-    showToast(`Visualizando detalhes de ${user.name}`, "info");
+  const handleView = (customer) => {
+    onView(customer);
+    showToast(`Visualizando detalhes de ${customer.name}`, "info");
   };
 
-  const handleEdit = (user) => {
-    onEdit(user);
-    showToast(`Editando "${user.name}"`, "info");
+  const handleEdit = (customer) => {
+    onEdit(customer);
+    showToast(`Editando "${customer.name}"`, "info");
   };
 
-  const handleDeleteClick = (user) => {
+  const handleDeleteClick = (customer) => {
     setConfirmModal({
       isOpen: true,
-      user,
+      customer,
     });
   };
 
   const handleDeleteConfirm = () => {
-    if (confirmModal.user) {
-      onDelete(confirmModal.user);
+    if (confirmModal.customer) {
+      onDelete(confirmModal.customer);
       showToast(
-        `Usuário "${confirmModal.user.name}" excluído com sucesso!`,
+        `Cliente "${confirmModal.customer.name}" excluído com sucesso!`,
         "success"
       );
-      setConfirmModal({ isOpen: false, user: null });
     }
   };
 
@@ -162,10 +190,10 @@ const UsersPage = ({ users, onAdd, onEdit, onDelete, onView }) => {
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}
-        onClose={() => setConfirmModal({ isOpen: false, user: null })}
+        onClose={() => setConfirmModal({ isOpen: false, customer: null })}
         onConfirm={handleDeleteConfirm}
-        title="Excluir Usuário"
-        message={`Tem certeza que deseja excluir "${confirmModal.user?.name}"? Esta ação não pode ser desfeita.`}
+        title="Excluir Cliente"
+        message={`Tem certeza que deseja excluir "${confirmModal.customer?.name}"? Esta ação não pode ser desfeita.`}
         confirmText="Excluir"
         cancelText="Cancelar"
       />
@@ -173,9 +201,9 @@ const UsersPage = ({ users, onAdd, onEdit, onDelete, onView }) => {
       <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-light text-zinc-900">Usuários</h2>
+            <h2 className="text-2xl font-light text-zinc-900">Clientes</h2>
             <p className="text-sm text-zinc-500 mt-1">
-              {users.length} funcionários cadastrados
+              {customers.length} clientes cadastrados
             </p>
           </div>
           <button
@@ -186,30 +214,62 @@ const UsersPage = ({ users, onAdd, onEdit, onDelete, onView }) => {
             <span>Adicionar</span>
           </button>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {users.map((user) => (
+          {customers.map((customer) => (
             <div
-              key={user.id}
+              key={customer.id}
               className="border border-zinc-200 rounded-xl p-5 hover:border-zinc-300 transition"
             >
               <div className="flex items-start space-x-3 mb-4">
-                <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <User size={20} className="text-zinc-600" strokeWidth={1.5} />
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <UserCircle
+                    size={20}
+                    className="text-blue-600"
+                    strokeWidth={1.5}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-zinc-900 truncate">
-                    {user.name}
+                    {customer.name}
                   </h3>
-                  <p className="text-sm text-zinc-500">{user.role}</p>
+                  <p className="text-sm text-zinc-500">{customer.age} anos</p>
                 </div>
               </div>
-              <div className="space-y-1 mb-4">
-                <p className="text-sm text-zinc-600 truncate">{user.email}</p>
-                <p className="text-sm text-zinc-500">{user.cpf}</p>
+
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center space-x-2 text-sm text-zinc-600">
+                  <span className="font-medium">CPF:</span>
+                  <span>{customer.cpf}</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-zinc-600">
+                  <Clock
+                    size={14}
+                    strokeWidth={1.5}
+                    className="text-zinc-400"
+                  />
+                  <span className="text-xs">
+                    Cliente há {calculateCustomerTime(customer.customerSince)}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-zinc-600">
+                  <Calendar
+                    size={14}
+                    strokeWidth={1.5}
+                    className="text-zinc-400"
+                  />
+                  <span className="text-xs">
+                    Desde{" "}
+                    {new Date(customer.customerSince).toLocaleDateString(
+                      "pt-BR"
+                    )}
+                  </span>
+                </div>
               </div>
+
               <div className="flex space-x-2">
                 <button
-                  onClick={() => handleView(user)}
+                  onClick={() => handleView(customer)}
                   className="flex-1 flex items-center justify-center space-x-1 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 px-3 py-2 rounded-lg text-sm transition border border-zinc-200"
                   title="Visualizar detalhes"
                 >
@@ -217,17 +277,17 @@ const UsersPage = ({ users, onAdd, onEdit, onDelete, onView }) => {
                   <span>Ver</span>
                 </button>
                 <button
-                  onClick={() => handleEdit(user)}
+                  onClick={() => handleEdit(customer)}
                   className="flex-1 flex items-center justify-center space-x-1 bg-zinc-50 hover:bg-zinc-100 text-zinc-700 px-3 py-2 rounded-lg text-sm transition border border-zinc-200"
-                  title="Editar usuário"
+                  title="Editar cliente"
                 >
                   <Edit2 size={14} strokeWidth={1.5} />
                   <span>Editar</span>
                 </button>
                 <button
-                  onClick={() => handleDeleteClick(user)}
+                  onClick={() => handleDeleteClick(customer)}
                   className="flex items-center justify-center bg-zinc-50 hover:bg-red-50 text-zinc-700 hover:text-red-600 px-3 py-2 rounded-lg text-sm transition border border-zinc-200 hover:border-red-200"
-                  title="Excluir usuário"
+                  title="Excluir cliente"
                 >
                   <Trash2 size={14} strokeWidth={1.5} />
                 </button>
@@ -240,4 +300,4 @@ const UsersPage = ({ users, onAdd, onEdit, onDelete, onView }) => {
   );
 };
 
-export default UsersPage;
+export default CustomersPage;
