@@ -1,21 +1,98 @@
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  maskCPF,
+  isValidCPF,
+  isValidEmail,
+  isStrongPassword,
+  getPasswordStrengthMessage,
+} from "../utils/validation";
 
 const Modal = ({ type, item, onClose, onSave }) => {
   const [formData, setFormData] = useState(item || {});
+  const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState("");
+
+  useEffect(() => {
+    if (formData.password) {
+      setPasswordStrength(getPasswordStrengthMessage(formData.password));
+    } else {
+      setPasswordStrength("");
+    }
+  }, [formData.password]);
+
+  const validateForm = () => {
+    const newErrors = {};
+    const isProduct = type.includes("Product");
+    const isCustomer = type.includes("Customer");
+
+    if (isProduct) {
+      if (!formData.name?.trim()) newErrors.name = "Nome é obrigatório";
+      if (!formData.price || formData.price <= 0)
+        newErrors.price = "Preço deve ser maior que zero";
+      if (!formData.type?.trim()) newErrors.type = "Tipo é obrigatório";
+      if (!formData.description?.trim())
+        newErrors.description = "Descrição é obrigatória";
+      if (!formData.expirationDate)
+        newErrors.expirationDate = "Data de validade é obrigatória";
+    } else {
+      // Validações para Usuário e Cliente
+      if (!formData.name?.trim()) newErrors.name = "Nome é obrigatório";
+
+      // Validação de Email
+      if (!formData.email?.trim()) {
+        newErrors.email = "Email é obrigatório";
+      } else if (!isValidEmail(formData.email)) {
+        newErrors.email = "Email inválido";
+      }
+
+      // Validação de CPF
+      if (!formData.cpf?.trim()) {
+        newErrors.cpf = "CPF é obrigatório";
+      } else if (!isValidCPF(formData.cpf)) {
+        newErrors.cpf = "CPF inválido";
+      }
+
+      // Validação de Senha (apenas para usuários, não para clientes)
+      if (!isCustomer) {
+        if (type === "addUser") {
+          if (!formData.password?.trim()) {
+            newErrors.password = "Senha é obrigatória";
+          } else if (!isStrongPassword(formData.password).isValid) {
+            newErrors.password = "Senha não atende aos requisitos de segurança";
+          }
+        } else if (type === "editUser" && formData.password) {
+          if (!isStrongPassword(formData.password).isValid) {
+            newErrors.password = "Senha não atende aos requisitos de segurança";
+          }
+        }
+      }
+
+      // Validações específicas para usuário
+      if (!isCustomer && !formData.role) {
+        newErrors.role = "Cargo é obrigatório";
+      }
+
+      // Validações específicas para cliente
+      if (isCustomer) {
+        if (!formData.age || formData.age < 1) {
+          newErrors.age = "Idade deve ser maior que zero";
+        }
+        if (!formData.customerSince) {
+          newErrors.customerSince = "Data de cadastro é obrigatória";
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const requiredFields = type.includes("Product")
-      ? ["name", "price", "type", "description", "expirationDate"]
-      : ["name", "email", "cpf", "role"];
 
-    if (type === "addUser") requiredFields.push("password");
-
-    const missingFields = requiredFields.filter((field) => !formData[field]);
-
-    if (missingFields.length > 0) {
-      alert("Preencha todos os campos obrigatórios");
+    if (!validateForm()) {
       return;
     }
 
@@ -23,17 +100,35 @@ const Modal = ({ type, item, onClose, onSave }) => {
   };
 
   const handleChange = (field, value) => {
+    // Aplica máscara de CPF
+    if (field === "cpf") {
+      value = maskCPF(value);
+    }
+
     setFormData({ ...formData, [field]: value });
+
+    // Remove o erro do campo quando o usuário começa a digitar
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: undefined });
+    }
   };
 
-  const isView = type === "viewUser";
+  const isView = type === "viewUser" || type === "viewCustomer";
   const isProduct = type.includes("Product");
+  const isCustomer = type.includes("Customer");
+
   const title = isView
-    ? "Detalhes do Usuário"
+    ? isCustomer
+      ? "Detalhes do Cliente"
+      : "Detalhes do Usuário"
     : type === "addProduct"
     ? "Adicionar Produto"
     : type === "editProduct"
     ? "Editar Produto"
+    : type === "addCustomer"
+    ? "Adicionar Cliente"
+    : type === "editCustomer"
+    ? "Editar Cliente"
     : type === "addUser"
     ? "Adicionar Usuário"
     : "Editar Usuário";
@@ -61,10 +156,17 @@ const Modal = ({ type, item, onClose, onSave }) => {
                   type="text"
                   value={formData.name || ""}
                   onChange={(e) => handleChange("name", e.target.value)}
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm"
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                    errors.name ? "border-red-300 bg-red-50" : "border-zinc-200"
+                  }`}
                   placeholder="Ex: Chocolate Nestlé"
-                  required
                 />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <AlertCircle size={14} />
+                    <span>{errors.name}</span>
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -79,10 +181,19 @@ const Modal = ({ type, item, onClose, onSave }) => {
                     onChange={(e) =>
                       handleChange("price", parseFloat(e.target.value))
                     }
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm"
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                      errors.price
+                        ? "border-red-300 bg-red-50"
+                        : "border-zinc-200"
+                    }`}
                     placeholder="0.00"
-                    required
                   />
+                  {errors.price && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                      <AlertCircle size={14} />
+                      <span>{errors.price}</span>
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
@@ -92,10 +203,19 @@ const Modal = ({ type, item, onClose, onSave }) => {
                     type="text"
                     value={formData.type || ""}
                     onChange={(e) => handleChange("type", e.target.value)}
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm"
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                      errors.type
+                        ? "border-red-300 bg-red-50"
+                        : "border-zinc-200"
+                    }`}
                     placeholder="Ex: Doces, Grãos"
-                    required
                   />
+                  {errors.type && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                      <AlertCircle size={14} />
+                      <span>{errors.type}</span>
+                    </p>
+                  )}
                 </div>
               </div>
               <div>
@@ -105,11 +225,20 @@ const Modal = ({ type, item, onClose, onSave }) => {
                 <textarea
                   value={formData.description || ""}
                   onChange={(e) => handleChange("description", e.target.value)}
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm resize-none"
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm resize-none ${
+                    errors.description
+                      ? "border-red-300 bg-red-50"
+                      : "border-zinc-200"
+                  }`}
                   rows="3"
                   placeholder="Descreva o produto..."
-                  required
                 />
+                {errors.description && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <AlertCircle size={14} />
+                    <span>{errors.description}</span>
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
@@ -121,9 +250,18 @@ const Modal = ({ type, item, onClose, onSave }) => {
                   onChange={(e) =>
                     handleChange("expirationDate", e.target.value)
                   }
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm"
-                  required
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                    errors.expirationDate
+                      ? "border-red-300 bg-red-50"
+                      : "border-zinc-200"
+                  }`}
                 />
+                {errors.expirationDate && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <AlertCircle size={14} />
+                    <span>{errors.expirationDate}</span>
+                  </p>
+                )}
               </div>
             </div>
           ) : (
@@ -136,12 +274,20 @@ const Modal = ({ type, item, onClose, onSave }) => {
                   type="text"
                   value={formData.name || ""}
                   onChange={(e) => handleChange("name", e.target.value)}
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm"
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                    errors.name ? "border-red-300 bg-red-50" : "border-zinc-200"
+                  }`}
                   disabled={isView}
                   placeholder="Ex: João Silva"
-                  required={!isView}
                 />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <AlertCircle size={14} />
+                    <span>{errors.name}</span>
+                  </p>
+                )}
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
                   Email *
@@ -150,12 +296,22 @@ const Modal = ({ type, item, onClose, onSave }) => {
                   type="email"
                   value={formData.email || ""}
                   onChange={(e) => handleChange("email", e.target.value)}
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm"
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                    errors.email
+                      ? "border-red-300 bg-red-50"
+                      : "border-zinc-200"
+                  }`}
                   disabled={isView}
                   placeholder="exemplo@email.com"
-                  required={!isView}
                 />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <AlertCircle size={14} />
+                    <span>{errors.email}</span>
+                  </p>
+                )}
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
                   CPF *
@@ -164,46 +320,161 @@ const Modal = ({ type, item, onClose, onSave }) => {
                   type="text"
                   value={formData.cpf || ""}
                   onChange={(e) => handleChange("cpf", e.target.value)}
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm"
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                    errors.cpf ? "border-red-300 bg-red-50" : "border-zinc-200"
+                  }`}
                   disabled={isView}
                   placeholder="000.000.000-00"
-                  required={!isView}
+                  maxLength="14"
                 />
+                {errors.cpf && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <AlertCircle size={14} />
+                    <span>{errors.cpf}</span>
+                  </p>
+                )}
               </div>
-              {!isView && (
+
+              {isCustomer && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-2">
+                      Idade *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.age || ""}
+                      onChange={(e) =>
+                        handleChange("age", parseInt(e.target.value))
+                      }
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                        errors.age
+                          ? "border-red-300 bg-red-50"
+                          : "border-zinc-200"
+                      }`}
+                      disabled={isView}
+                      placeholder="Ex: 25"
+                    />
+                    {errors.age && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                        <AlertCircle size={14} />
+                        <span>{errors.age}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-2">
+                      Cliente Desde *
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.customerSince || ""}
+                      onChange={(e) =>
+                        handleChange("customerSince", e.target.value)
+                      }
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                        errors.customerSince
+                          ? "border-red-300 bg-red-50"
+                          : "border-zinc-200"
+                      }`}
+                      disabled={isView}
+                    />
+                    {errors.customerSince && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                        <AlertCircle size={14} />
+                        <span>{errors.customerSince}</span>
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {!isCustomer && !isView && (
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
                     Senha{" "}
                     {type === "addUser" ? "*" : "(deixe vazio para manter)"}
                   </label>
-                  <input
-                    type="password"
-                    value={formData.password || ""}
-                    onChange={(e) => handleChange("password", e.target.value)}
-                    className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm"
-                    placeholder="••••••••"
-                    required={type === "addUser"}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password || ""}
+                      onChange={(e) => handleChange("password", e.target.value)}
+                      className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                        errors.password
+                          ? "border-red-300 bg-red-50"
+                          : "border-zinc-200"
+                      }`}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700"
+                    >
+                      {showPassword ? (
+                        <EyeOff size={18} strokeWidth={1.5} />
+                      ) : (
+                        <Eye size={18} strokeWidth={1.5} />
+                      )}
+                    </button>
+                  </div>
+                  {formData.password && (
+                    <p
+                      className={`mt-1 text-xs flex items-center space-x-1 ${
+                        isStrongPassword(formData.password).isValid
+                          ? "text-emerald-600"
+                          : "text-amber-600"
+                      }`}
+                    >
+                      {isStrongPassword(formData.password).isValid ? (
+                        <CheckCircle size={14} />
+                      ) : (
+                        <AlertCircle size={14} />
+                      )}
+                      <span>{passwordStrength}</span>
+                    </p>
+                  )}
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                      <AlertCircle size={14} />
+                      <span>{errors.password}</span>
+                    </p>
+                  )}
                 </div>
               )}
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Cargo *
-                </label>
-                <select
-                  value={formData.role || ""}
-                  onChange={(e) => handleChange("role", e.target.value)}
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm"
-                  disabled={isView}
-                  required={!isView}
-                >
-                  <option value="">Selecione...</option>
-                  <option value="Gerente">Gerente</option>
-                  <option value="Vendedor">Vendedor</option>
-                  <option value="Estoquista">Estoquista</option>
-                  <option value="Caixa">Caixa</option>
-                </select>
-              </div>
+
+              {!isCustomer && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Cargo *
+                  </label>
+                  <select
+                    value={formData.role || ""}
+                    onChange={(e) => handleChange("role", e.target.value)}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+                      errors.role
+                        ? "border-red-300 bg-red-50"
+                        : "border-zinc-200"
+                    }`}
+                    disabled={isView}
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Gerente">Gerente</option>
+                    <option value="Vendedor">Vendedor</option>
+                    <option value="Estoquista">Estoquista</option>
+                    <option value="Caixa">Caixa</option>
+                  </select>
+                  {errors.role && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                      <AlertCircle size={14} />
+                      <span>{errors.role}</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {!isView && (

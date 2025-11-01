@@ -1,29 +1,36 @@
 import { useState } from "react";
-import { ShoppingCart, Users, Tag, LogOut, User, Package } from "lucide-react";
-import { mockUsers, mockProducts } from "./services/mockData";
+import {
+  ShoppingCart,
+  Users,
+  Tag,
+  LogOut,
+  User,
+  Package,
+  UserCircle,
+} from "lucide-react";
+import { mockUsers, mockProducts, mockCustomers } from "./services/mockData";
 import LoginPage from "./components/LoginPage";
 import ProductsPage from "./components/ProductsPage";
 import PromotionsPage from "./components/PromotionsPage";
 import UsersPage from "./components/UsersPage";
+import CustomersPage from "./components/CustomersPage";
 import Modal from "./components/Modal";
-import ConfirmModal from "./components/ConfirmModal";
+import Toast from "./components/Toast";
 
 function App() {
   const [currentPage, setCurrentPage] = useState("login");
   const [loggedUser, setLoggedUser] = useState(null);
   const [users, setUsers] = useState(mockUsers);
   const [products, setProducts] = useState(mockProducts);
+  const [customers, setCustomers] = useState(mockCustomers);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
+  const [toast, setToast] = useState(null);
 
-  // Estado do modal de confirmação
-  const [confirmModal, setConfirmModal] = useState({
-    isOpen: false,
-    title: "",
-    message: "",
-    onConfirm: () => {},
-  });
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+  };
 
   const handleLogin = (email, password) => {
     const user = users.find(
@@ -32,6 +39,7 @@ function App() {
     if (user) {
       setLoggedUser(user);
       setCurrentPage("products");
+      showToast(`Bem-vindo, ${user.name}!`, "success");
       return true;
     }
     return false;
@@ -42,86 +50,83 @@ function App() {
     setCurrentPage("login");
   };
 
+  // Products
   const addProduct = (product) => {
     const newProduct = { ...product, id: Date.now(), promotionalPrice: null };
     setProducts([...products, newProduct]);
+    showToast(`Produto "${product.name}" adicionado com sucesso!`, "success");
   };
 
   const updateProduct = (id, updatedProduct) => {
     setProducts(
       products.map((p) => (p.id === id ? { ...p, ...updatedProduct } : p))
     );
+    showToast(
+      `Produto "${updatedProduct.name}" atualizado com sucesso!`,
+      "success"
+    );
   };
 
   const deleteProduct = (id) => {
+    const product = products.find((p) => p.id === id);
     setProducts(products.filter((p) => p.id !== id));
-  };
-
-  const confirmDeleteProduct = (product) => {
-    setConfirmModal({
-      isOpen: true,
-      title: "Excluir Produto",
-      message: `Deseja realmente excluir "${product.name}"? Esta ação não pode ser desfeita.`,
-      onConfirm: () => deleteProduct(product.id),
-    });
+    showToast(`Produto "${product.name}" excluído com sucesso!`, "success");
   };
 
   const applyPromotion = (id, promotionalPrice) => {
+    const product = products.find((p) => p.id === id);
     updateProduct(id, { promotionalPrice: parseFloat(promotionalPrice) });
+    showToast(`Promoção aplicada em "${product.name}"!`, "success");
   };
 
   const removePromotion = (id) => {
+    const product = products.find((p) => p.id === id);
     updateProduct(id, { promotionalPrice: null });
+    showToast(`Promoção removida de "${product.name}"!`, "success");
   };
 
-  const confirmRemovePromotion = (product) => {
-    setConfirmModal({
-      isOpen: true,
-      title: "Remover Promoção",
-      message: `Deseja remover a promoção de "${product.name}"?`,
-      onConfirm: () => removePromotion(product.id),
-    });
-  };
-
+  // Users
   const addUser = (user) => {
     const newUser = { ...user, id: Date.now() };
     setUsers([...users, newUser]);
+    showToast(`Usuário "${user.name}" adicionado com sucesso!`, "success");
   };
 
   const updateUser = (id, updatedUser) => {
     setUsers(users.map((u) => (u.id === id ? { ...u, ...updatedUser } : u)));
+    showToast(
+      `Usuário "${updatedUser.name}" atualizado com sucesso!`,
+      "success"
+    );
   };
 
-  const deleteUser = (id) => {
-    if (id === loggedUser?.id) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Ação Não Permitida",
-        message: "Você não pode excluir seu próprio usuário!",
-        onConfirm: () => {},
-      });
-      return;
-    }
-    setUsers(users.filter((u) => u.id !== id));
-  };
-
-  const confirmDeleteUser = (user) => {
+  const deleteUser = (user) => {
     if (user.id === loggedUser?.id) {
-      setConfirmModal({
-        isOpen: true,
-        title: "Ação Não Permitida",
-        message: "Você não pode excluir seu próprio usuário!",
-        onConfirm: () => {},
-      });
+      showToast("Você não pode excluir seu próprio usuário!", "error");
       return;
     }
+    setUsers(users.filter((u) => u.id !== user.id));
+  };
 
-    setConfirmModal({
-      isOpen: true,
-      title: "Excluir Usuário",
-      message: `Deseja realmente excluir "${user.name}"? Esta ação não pode ser desfeita.`,
-      onConfirm: () => deleteUser(user.id),
-    });
+  // Customers
+  const addCustomer = (customer) => {
+    const newCustomer = { ...customer, id: Date.now() };
+    setCustomers([...customers, newCustomer]);
+    showToast(`Cliente "${customer.name}" adicionado com sucesso!`, "success");
+  };
+
+  const updateCustomer = (id, updatedCustomer) => {
+    setCustomers(
+      customers.map((c) => (c.id === id ? { ...c, ...updatedCustomer } : c))
+    );
+    showToast(
+      `Cliente "${updatedCustomer.name}" atualizado com sucesso!`,
+      "success"
+    );
+  };
+
+  const deleteCustomer = (customer) => {
+    setCustomers(customers.filter((c) => c.id !== customer.id));
   };
 
   const openModal = (type, item = null) => {
@@ -135,21 +140,20 @@ function App() {
     setSelectedItem(null);
   };
 
-  const closeConfirmModal = () => {
-    setConfirmModal({
-      isOpen: false,
-      title: "",
-      message: "",
-      onConfirm: () => {},
-    });
-  };
-
   if (!loggedUser) {
     return <LoginPage onLogin={handleLogin} />;
   }
 
   return (
     <div className="min-h-screen bg-zinc-50">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <nav className="bg-white border-b border-zinc-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -161,9 +165,7 @@ function App() {
                   strokeWidth={1.5}
                 />
               </div>
-              <h1 className="text-xl font-medium text-zinc-900">
-                Supermercado Bom Preço
-              </h1>
+              <h1 className="text-xl font-light text-zinc-900">SuperMercado</h1>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-zinc-600">
@@ -215,7 +217,18 @@ function App() {
             }`}
           >
             <Users size={18} strokeWidth={1.5} />
-            <span>Usuários</span>
+            <span>Funcionários</span>
+          </button>
+          <button
+            onClick={() => setCurrentPage("customers")}
+            className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-sm font-medium transition ${
+              currentPage === "customers"
+                ? "bg-zinc-900 text-white"
+                : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"
+            }`}
+          >
+            <UserCircle size={18} strokeWidth={1.5} />
+            <span>Clientes</span>
           </button>
         </div>
 
@@ -224,14 +237,14 @@ function App() {
             products={products}
             onAdd={() => openModal("addProduct")}
             onEdit={(product) => openModal("editProduct", product)}
-            onDelete={confirmDeleteProduct}
+            onDelete={deleteProduct}
           />
         )}
         {currentPage === "promotions" && (
           <PromotionsPage
             products={products}
             onApplyPromotion={applyPromotion}
-            onRemovePromotion={confirmRemovePromotion}
+            onRemovePromotion={removePromotion}
           />
         )}
         {currentPage === "users" && (
@@ -239,8 +252,17 @@ function App() {
             users={users}
             onAdd={() => openModal("addUser")}
             onEdit={(user) => openModal("editUser", user)}
-            onDelete={confirmDeleteUser}
+            onDelete={deleteUser}
             onView={(user) => openModal("viewUser", user)}
+          />
+        )}
+        {currentPage === "customers" && (
+          <CustomersPage
+            customers={customers}
+            onAdd={() => openModal("addCustomer")}
+            onEdit={(customer) => openModal("editCustomer", customer)}
+            onDelete={deleteCustomer}
+            onView={(customer) => openModal("viewCustomer", customer)}
           />
         )}
       </div>
@@ -257,18 +279,13 @@ function App() {
             else if (modalType === "addUser") addUser(data);
             else if (modalType === "editUser")
               updateUser(selectedItem.id, data);
+            else if (modalType === "addCustomer") addCustomer(data);
+            else if (modalType === "editCustomer")
+              updateCustomer(selectedItem.id, data);
             closeModal();
           }}
         />
       )}
-
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={closeConfirmModal}
-        onConfirm={confirmModal.onConfirm}
-        title={confirmModal.title}
-        message={confirmModal.message}
-      />
     </div>
   );
 }

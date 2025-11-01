@@ -1,19 +1,19 @@
 export const mockUsers = [
   {
     id: 1,
-    name: "Ana Gusmão",
-    email: "ana@super.com",
+    name: "João Silva",
+    email: "joao@super.com",
     cpf: "123.456.789-00",
     role: "Gerente",
-    password: "123456",
+    password: "Senha@123",
   },
   {
     id: 2,
-    name: "Bruno Vasconcelos",
-    email: "bruno@super.com",
+    name: "Maria Santos",
+    email: "maria@super.com",
     cpf: "987.654.321-00",
     role: "Vendedor",
-    password: "123456",
+    password: "Senha@123",
   },
 ];
 
@@ -44,5 +44,24 @@ export const mockProducts = [
     type: "Laticínios",
     description: "Leite integral pasteurizado",
     expirationDate: "2025-11-15",
+  },
+];
+
+export const mockCustomers = [
+  {
+    id: 1,
+    name: "Carlos Oliveira",
+    email: "carlos@email.com",
+    cpf: "111.222.333-44",
+    age: 35,
+    customerSince: "2020-03-15",
+  },
+  {
+    id: 2,
+    name: "Ana Paula Costa",
+    email: "ana@email.com",
+    cpf: "555.666.777-88",
+    age: 28,
+    customerSince: "2022-07-20",
   },
 ];
