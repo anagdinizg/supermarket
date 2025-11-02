@@ -3,10 +3,7 @@ import { CheckCircle, XCircle, Info, X } from "lucide-react";
 
 const Toast = ({ message, type = "success", onClose, duration = 3000 }) => {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, duration);
-
+    const timer = setTimeout(() => onClose(), duration);
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
