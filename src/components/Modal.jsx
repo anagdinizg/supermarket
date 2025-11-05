@@ -7,12 +7,15 @@ import {
   isStrongPassword,
   getPasswordStrengthMessage,
 } from "../utils/validation";
+import AvatarUpload from "./AvatarUpload";
+
 
 const Modal = ({ type, item, onClose, onSave }) => {
   const [formData, setFormData] = useState(item || {});
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState("");
+
 
   useEffect(() => {
     if (formData.password) {
@@ -22,10 +25,16 @@ const Modal = ({ type, item, onClose, onSave }) => {
     }
   }, [formData.password]);
 
+
+  const isUser = type.toLowerCase().includes("user");
+  const isCustomer = type.toLowerCase().includes("customer");
+  const isProduct = type.toLowerCase().includes("product");
+  const isView = type.toLowerCase().startsWith("view");
+
+
   const validateForm = () => {
     const newErrors = {};
-    const isProduct = type.includes("Product");
-    const isCustomer = type.includes("Customer");
+
 
     if (isProduct) {
       if (!formData.name?.trim()) newErrors.name = "Nome é obrigatório";
@@ -36,86 +45,71 @@ const Modal = ({ type, item, onClose, onSave }) => {
         newErrors.description = "Descrição é obrigatória";
       if (!formData.expirationDate)
         newErrors.expirationDate = "Data de validade é obrigatória";
-    } else {
-      // Validações para Usuário e Cliente
+    }
+
+
+    if (isUser || isCustomer) {
       if (!formData.name?.trim()) newErrors.name = "Nome é obrigatório";
 
-      // Validação de Email
-      if (!formData.email?.trim()) {
-        newErrors.email = "Email é obrigatório";
-      } else if (!isValidEmail(formData.email)) {
+
+      if (!formData.email?.trim()) newErrors.email = "Email é obrigatório";
+      else if (!isValidEmail(formData.email))
         newErrors.email = "Email inválido";
+
+
+      if (!formData.cpf?.trim()) newErrors.cpf = "CPF é obrigatório";
+      else if (!isValidCPF(formData.cpf)) newErrors.cpf = "CPF inválido";
+
+
+      if (isUser) {
+        if (
+          (type === "addUser" || type === "AddUser") &&
+          !formData.password?.trim()
+        )
+          newErrors.password = "Senha é obrigatória";
+        else if (
+          formData.password &&
+          !isStrongPassword(formData.password).isValid
+        )
+          newErrors.password = "Senha não atende aos requisitos de segurança";
+
+
+        if (!formData.role) newErrors.role = "Cargo é obrigatório";
       }
 
-      // Validação de CPF
-      if (!formData.cpf?.trim()) {
-        newErrors.cpf = "CPF é obrigatório";
-      } else if (!isValidCPF(formData.cpf)) {
-        newErrors.cpf = "CPF inválido";
-      }
 
-      // Validação de Senha (apenas para usuários, não para clientes)
-      if (!isCustomer) {
-        if (type === "addUser") {
-          if (!formData.password?.trim()) {
-            newErrors.password = "Senha é obrigatória";
-          } else if (!isStrongPassword(formData.password).isValid) {
-            newErrors.password = "Senha não atende aos requisitos de segurança";
-          }
-        } else if (type === "editUser" && formData.password) {
-          if (!isStrongPassword(formData.password).isValid) {
-            newErrors.password = "Senha não atende aos requisitos de segurança";
-          }
-        }
-      }
-
-      // Validações específicas para usuário
-      if (!isCustomer && !formData.role) {
-        newErrors.role = "Cargo é obrigatório";
-      }
-
-      // Validações específicas para cliente
       if (isCustomer) {
-        if (!formData.age || formData.age < 1) {
+        if (!formData.age || formData.age < 1)
           newErrors.age = "Idade deve ser maior que zero";
-        }
-        if (!formData.customerSince) {
+        if (!formData.customerSince)
           newErrors.customerSince = "Data de cadastro é obrigatória";
-        }
       }
     }
+
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     onSave(formData);
   };
 
+
   const handleChange = (field, value) => {
-    // Aplica máscara de CPF
-    if (field === "cpf") {
-      value = maskCPF(value);
-    }
-
+    if (field === "cpf") value = maskCPF(value);
     setFormData({ ...formData, [field]: value });
-
-    // Remove o erro do campo quando o usuário começa a digitar
-    if (errors[field]) {
-      setErrors({ ...errors, [field]: undefined });
-    }
+    if (errors[field]) setErrors({ ...errors, [field]: undefined });
   };
 
-  const isView = type === "viewUser" || type === "viewCustomer";
-  const isProduct = type.includes("Product");
-  const isCustomer = type.includes("Customer");
+
+  const handleAvatarChange = (avatar) => {
+    setFormData({ ...formData, avatar });
+  };
+
 
   const title = isView
     ? isCustomer
@@ -131,7 +125,10 @@ const Modal = ({ type, item, onClose, onSave }) => {
     ? "Editar Cliente"
     : type === "addUser"
     ? "Adicionar Usuário"
-    : "Editar Usuário";
+    : type === "editUser"
+    ? "Editar Usuário"
+    : "Modal";
+
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -145,339 +142,136 @@ const Modal = ({ type, item, onClose, onSave }) => {
             <X size={20} strokeWidth={1.5} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6">
-          {isProduct ? (
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Nome do Produto *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name || ""}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                    errors.name ? "border-red-300 bg-red-50" : "border-zinc-200"
-                  }`}
-                  placeholder="Ex: Chocolate Nestlé"
-                />
-                {errors.name && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                    <AlertCircle size={14} />
-                    <span>{errors.name}</span>
-                  </p>
-                )}
-              </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {isProduct && (
+            <>
+              <InputField
+                label="Nome do Produto *"
+                value={formData.name}
+                onChange={(v) => handleChange("name", v)}
+                error={errors.name}
+                placeholder="Ex: Chocolate Nestlé"
+              />
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Preço (R$) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.price || ""}
-                    onChange={(e) =>
-                      handleChange("price", parseFloat(e.target.value))
-                    }
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                      errors.price
-                        ? "border-red-300 bg-red-50"
-                        : "border-zinc-200"
-                    }`}
-                    placeholder="0.00"
+                <InputField
+                  label="Preço (R$) *"
+                  value={formData.price}
+                  type="number"
+                  onChange={(v) => handleChange("price", parseFloat(v))}
+                  error={errors.price}
+                  placeholder="0.00"
+                />
+                <InputField
+                  label="Tipo *"
+                  value={formData.type}
+                  onChange={(v) => handleChange("type", v)}
+                  error={errors.type}
+                  placeholder="Ex: Doces, Grãos"
+                />
+              </div>
+              <InputField
+                label="Descrição *"
+                value={formData.description}
+                onChange={(v) => handleChange("description", v)}
+                error={errors.description}
+                textarea
+                placeholder="Descreva o produto..."
+              />
+              <InputField
+                label="Data de Validade *"
+                value={formData.expirationDate}
+                onChange={(v) => handleChange("expirationDate", v)}
+                type="date"
+                error={errors.expirationDate}
+              />
+            </>
+          )}
+
+
+          {(isUser || isCustomer) && (
+            <>
+              {isUser && (
+                <div className="flex justify-center pb-4 border-b border-zinc-200">
+                  <AvatarUpload
+                    currentAvatar={formData.avatar || null}
+                    onAvatarChange={handleAvatarChange}
+                    userName={formData.name || "Usuário"}
+                    isView={isView}
                   />
-                  {errors.price && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                      <AlertCircle size={14} />
-                      <span>{errors.price}</span>
-                    </p>
-                  )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Tipo *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.type || ""}
-                    onChange={(e) => handleChange("type", e.target.value)}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                      errors.type
-                        ? "border-red-300 bg-red-50"
-                        : "border-zinc-200"
-                    }`}
-                    placeholder="Ex: Doces, Grãos"
-                  />
-                  {errors.type && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                      <AlertCircle size={14} />
-                      <span>{errors.type}</span>
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Descrição *
-                </label>
-                <textarea
-                  value={formData.description || ""}
-                  onChange={(e) => handleChange("description", e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm resize-none ${
-                    errors.description
-                      ? "border-red-300 bg-red-50"
-                      : "border-zinc-200"
-                  }`}
-                  rows="3"
-                  placeholder="Descreva o produto..."
-                />
-                {errors.description && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                    <AlertCircle size={14} />
-                    <span>{errors.description}</span>
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Data de Validade *
-                </label>
-                <input
-                  type="date"
-                  value={formData.expirationDate || ""}
-                  onChange={(e) =>
-                    handleChange("expirationDate", e.target.value)
-                  }
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                    errors.expirationDate
-                      ? "border-red-300 bg-red-50"
-                      : "border-zinc-200"
-                  }`}
-                />
-                {errors.expirationDate && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                    <AlertCircle size={14} />
-                    <span>{errors.expirationDate}</span>
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Nome Completo *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name || ""}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                    errors.name ? "border-red-300 bg-red-50" : "border-zinc-200"
-                  }`}
-                  disabled={isView}
-                  placeholder="Ex: João Silva"
-                />
-                {errors.name && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                    <AlertCircle size={14} />
-                    <span>{errors.name}</span>
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  value={formData.email || ""}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                    errors.email
-                      ? "border-red-300 bg-red-50"
-                      : "border-zinc-200"
-                  }`}
-                  disabled={isView}
-                  placeholder="exemplo@email.com"
-                />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                    <AlertCircle size={14} />
-                    <span>{errors.email}</span>
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  CPF *
-                </label>
-                <input
-                  type="text"
-                  value={formData.cpf || ""}
-                  onChange={(e) => handleChange("cpf", e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                    errors.cpf ? "border-red-300 bg-red-50" : "border-zinc-200"
-                  }`}
-                  disabled={isView}
-                  placeholder="000.000.000-00"
-                  maxLength="14"
-                />
-                {errors.cpf && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                    <AlertCircle size={14} />
-                    <span>{errors.cpf}</span>
-                  </p>
-                )}
-              </div>
-
+              )}
+              <InputField
+                label="Nome Completo *"
+                value={formData.name}
+                onChange={(v) => handleChange("name", v)}
+                error={errors.name}
+                disabled={isView}
+              />
+              <InputField
+                label="Email *"
+                value={formData.email}
+                onChange={(v) => handleChange("email", v)}
+                error={errors.email}
+                disabled={isView}
+              />
+              <InputField
+                label="CPF *"
+                value={formData.cpf}
+                onChange={(v) => handleChange("cpf", v)}
+                error={errors.cpf}
+                disabled={isView}
+                maxLength={14}
+              />
               {isCustomer && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-2">
-                      Idade *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={formData.age || ""}
-                      onChange={(e) =>
-                        handleChange("age", parseInt(e.target.value))
-                      }
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                        errors.age
-                          ? "border-red-300 bg-red-50"
-                          : "border-zinc-200"
-                      }`}
-                      disabled={isView}
-                      placeholder="Ex: 25"
-                    />
-                    {errors.age && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                        <AlertCircle size={14} />
-                        <span>{errors.age}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-2">
-                      Cliente Desde *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.customerSince || ""}
-                      onChange={(e) =>
-                        handleChange("customerSince", e.target.value)
-                      }
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                        errors.customerSince
-                          ? "border-red-300 bg-red-50"
-                          : "border-zinc-200"
-                      }`}
-                      disabled={isView}
-                    />
-                    {errors.customerSince && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                        <AlertCircle size={14} />
-                        <span>{errors.customerSince}</span>
-                      </p>
-                    )}
-                  </div>
+                  <InputField
+                    label="Idade *"
+                    type="number"
+                    value={formData.age}
+                    onChange={(v) => handleChange("age", parseInt(v))}
+                    error={errors.age}
+                    disabled={isView}
+                  />
+                  <InputField
+                    label="Cliente Desde *"
+                    type="date"
+                    value={formData.customerSince}
+                    onChange={(v) => handleChange("customerSince", v)}
+                    error={errors.customerSince}
+                    disabled={isView}
+                  />
                 </>
               )}
-
-              {!isCustomer && !isView && (
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Senha{" "}
-                    {type === "addUser" ? "*" : "(deixe vazio para manter)"}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={formData.password || ""}
-                      onChange={(e) => handleChange("password", e.target.value)}
-                      className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                        errors.password
-                          ? "border-red-300 bg-red-50"
-                          : "border-zinc-200"
-                      }`}
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700"
-                    >
-                      {showPassword ? (
-                        <EyeOff size={18} strokeWidth={1.5} />
-                      ) : (
-                        <Eye size={18} strokeWidth={1.5} />
-                      )}
-                    </button>
-                  </div>
-                  {formData.password && (
-                    <p
-                      className={`mt-1 text-xs flex items-center space-x-1 ${
-                        isStrongPassword(formData.password).isValid
-                          ? "text-emerald-600"
-                          : "text-amber-600"
-                      }`}
-                    >
-                      {isStrongPassword(formData.password).isValid ? (
-                        <CheckCircle size={14} />
-                      ) : (
-                        <AlertCircle size={14} />
-                      )}
-                      <span>{passwordStrength}</span>
-                    </p>
-                  )}
-                  {errors.password && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                      <AlertCircle size={14} />
-                      <span>{errors.password}</span>
-                    </p>
-                  )}
-                </div>
+              {isUser && !isView && (
+                <PasswordField
+                  label={
+                    type === "addUser"
+                      ? "Senha *"
+                      : "Senha (deixe vazio para manter)"
+                  }
+                  value={formData.password}
+                  onChange={(v) => handleChange("password", v)}
+                  showPassword={showPassword}
+                  setShowPassword={setShowPassword}
+                  error={errors.password}
+                  strength={passwordStrength}
+                />
               )}
-
-              {!isCustomer && (
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Cargo *
-                  </label>
-                  <select
-                    value={formData.role || ""}
-                    onChange={(e) => handleChange("role", e.target.value)}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
-                      errors.role
-                        ? "border-red-300 bg-red-50"
-                        : "border-zinc-200"
-                    }`}
-                    disabled={isView}
-                  >
-                    <option value="">Selecione...</option>
-                    <option value="Gerente">Gerente</option>
-                    <option value="Vendedor">Vendedor</option>
-                    <option value="Estoquista">Estoquista</option>
-                    <option value="Caixa">Caixa</option>
-                  </select>
-                  {errors.role && (
-                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                      <AlertCircle size={14} />
-                      <span>{errors.role}</span>
-                    </p>
-                  )}
-                </div>
+              {isUser && (
+                <SelectField
+                  label="Cargo *"
+                  value={formData.role}
+                  onChange={(v) => handleChange("role", v)}
+                  options={["Gerente", "Vendedor", "Estoquista", "Caixa"]}
+                  error={errors.role}
+                  disabled={isView}
+                />
               )}
-            </div>
+            </>
           )}
-          {!isView && (
+
+
+          {!isView ? (
             <div className="flex space-x-3 mt-6">
               <button
                 type="button"
@@ -493,8 +287,7 @@ const Modal = ({ type, item, onClose, onSave }) => {
                 Salvar
               </button>
             </div>
-          )}
-          {isView && (
+          ) : (
             <div className="mt-6">
               <button
                 type="button"
@@ -510,5 +303,139 @@ const Modal = ({ type, item, onClose, onSave }) => {
     </div>
   );
 };
+
+
+const InputField = ({
+  label,
+  value,
+  onChange,
+  error,
+  type = "text",
+  textarea = false,
+  disabled = false,
+  maxLength,
+}) => (
+  <div>
+    <label className="block text-sm font-medium text-zinc-700 mb-2">
+      {label}
+    </label>
+    {textarea ? (
+      <textarea
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm resize-none ${
+          error ? "border-red-300 bg-red-50" : "border-zinc-200"
+        }`}
+        rows="3"
+        disabled={disabled}
+      />
+    ) : (
+      <input
+        type={type}
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+          error ? "border-red-300 bg-red-50" : "border-zinc-200"
+        }`}
+        disabled={disabled}
+        maxLength={maxLength}
+      />
+    )}
+    {error && (
+      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+        <AlertCircle size={14} />
+        <span>{error}</span>
+      </p>
+    )}
+  </div>
+);
+
+
+const PasswordField = ({
+  label,
+  value,
+  onChange,
+  showPassword,
+  setShowPassword,
+  error,
+  strength,
+}) => (
+  <div>
+    <label className="block text-sm font-medium text-zinc-700 mb-2">
+      {label}
+    </label>
+    <div className="relative">
+      <input
+        type={showPassword ? "text" : "password"}
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full px-4 py-3 pr-12 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+          error ? "border-red-300 bg-red-50" : "border-zinc-200"
+        }`}
+        placeholder="••••••••"
+      />
+      <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700"
+      >
+        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </div>
+    {value && (
+      <p
+        className={`mt-1 text-xs flex items-center space-x-1 ${
+          isStrongPassword(value).isValid
+            ? "text-emerald-600"
+            : "text-amber-600"
+        }`}
+      >
+        {isStrongPassword(value).isValid ? (
+          <CheckCircle size={14} />
+        ) : (
+          <AlertCircle size={14} />
+        )}
+        <span>{strength}</span>
+      </p>
+    )}
+    {error && (
+      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+        <AlertCircle size={14} />
+        <span>{error}</span>
+      </p>
+    )}
+  </div>
+);
+
+
+const SelectField = ({ label, value, onChange, options, error, disabled }) => (
+  <div>
+    <label className="block text-sm font-medium text-zinc-700 mb-2">
+      {label}
+    </label>
+    <select
+      value={value || ""}
+      onChange={(e) => onChange(e.target.value)}
+      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition text-sm ${
+        error ? "border-red-300 bg-red-50" : "border-zinc-200"
+      }`}
+      disabled={disabled}
+    >
+      <option value="">Selecione...</option>
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt}
+        </option>
+      ))}
+    </select>
+    {error && (
+      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+        <AlertCircle size={14} />
+        <span>{error}</span>
+      </p>
+    )}
+  </div>
+);
+
 
 export default Modal;
