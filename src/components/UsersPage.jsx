@@ -193,8 +193,22 @@ const UsersPage = ({ users, onAdd, onEdit, onDelete, onView }) => {
               className="border border-zinc-200 rounded-xl p-5 hover:border-zinc-300 transition"
             >
               <div className="flex items-start space-x-3 mb-4">
-                <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <User size={20} className="text-zinc-600" strokeWidth={1.5} />
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-100 flex-shrink-0 border border-zinc-200">
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <User
+                        size={20}
+                        className="text-zinc-600"
+                        strokeWidth={1.5}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-zinc-900 truncate">
