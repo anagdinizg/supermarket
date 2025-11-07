@@ -81,7 +81,7 @@ const LoginPage = ({ onLogin }) => {
           <p className="text-xs text-zinc-600 font-medium mb-2">
             Credencial de teste:
           </p>
-          <p className="text-xs text-zinc-500">bruno@super.com • 123456</p>
+          <p className="text-xs text-zinc-500">bruno@super.com • Senha@123</p>
         </div>
       </div>
     </div>
