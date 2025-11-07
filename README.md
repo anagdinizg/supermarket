@@ -10,6 +10,44 @@ Painel administrativo simples feito com React + Vite, estilizado com Tailwind CS
 - Ícones: `lucide-react`
 - Dados de exemplo: [src/services/mockData.js](src/services/mockData.js)
 
+## Estrutura do projeto
+
+Principais arquivos e pastas:
+- index.html
+- src/main.jsx
+- src/App.jsx — estado global inicial e rota principal
+- src/services/mockData.js — dados mock (users, products, customers)
+- src/utils/validation.js — máscaras e validações:
+  - maskCPF
+  - isValidCPF
+  - isValidEmail
+  - isStrongPassword
+  - getPasswordStrengthMessage
+  
+Rotas e layout:
+- AppRoutes — roteamento público/privado
+- AuthenticatedLayout — layout da área autenticada
+
+Páginas:
+- src/pages/LoginPage.jsx
+- src/pages/ProductsPage.jsx
+- src/pages/PromotionsPage.jsx
+- src/pages/UsersPage.jsx
+- src/pages/CustomersPage.jsx
+- 
+Componentes principais:
+- Modal — formulário para adicionar/editar/visualizar Users, Customers e Products
+- AvatarUpload — uploader de avatar usado dentro do modal
+- Toast — Feedbacks
+- Loading — tela de loading
+- ConfirmModal — confirmação de exclusão
+
+## Fluxo e comportamento
+- Autenticação simples baseada em comparação com mockUsers. Credenciais de teste no login: bruno@super.com / Senha@123 (ver src/pages/LoginPage.jsx).
+- CRUD é mantido em memória via estado no src/App.jsx e passado para as páginas via props.
+- Modal de edição/visualização reutilizável: veja Modal e sua integração no AuthenticatedLayout.
+- Validações de formulário centralizadas em src/utils/validation.js.
+
 ## Como rodar
 Instale dependências e rode em modo de desenvolvimento:
 
