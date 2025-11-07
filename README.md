@@ -34,7 +34,7 @@ Páginas:
 - src/pages/PromotionsPage.jsx
 - src/pages/UsersPage.jsx
 - src/pages/CustomersPage.jsx
-- 
+  
 Componentes principais:
 - Modal — formulário para adicionar/editar/visualizar Users, Customers e Products
 - AvatarUpload — uploader de avatar usado dentro do modal
