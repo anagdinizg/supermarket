@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Plus,
   Edit2,
   Trash2,
   CheckCircle,
@@ -8,15 +7,15 @@ import {
   Info,
   X,
   AlertTriangle,
+  Package,
+  Plus,
 } from "lucide-react";
-import { useEffect } from "react";
 
 const Toast = ({ message, type = "success", onClose, duration = 3000 }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
     }, duration);
-
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
@@ -104,7 +103,7 @@ const ConfirmModal = ({
   );
 };
 
-const ProductsPage = ({ products, onAdd, onEdit, onDelete, showToast }) => {
+const ProductsPage = ({ products, onAdd, onEdit, onDelete }) => {
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     product: null,
@@ -119,21 +118,12 @@ const ProductsPage = ({ products, onAdd, onEdit, onDelete, showToast }) => {
   };
 
   const handleDeleteClick = (product) => {
-    setConfirmModal({
-      isOpen: true,
-      product,
-    });
+    setConfirmModal({ isOpen: true, product });
   };
 
   const handleDeleteConfirm = () => {
     if (confirmModal.product) {
       onDelete(confirmModal.product);
-      if (showToast) {
-        showToast(
-          `Produto "${confirmModal.product.name}" excluído com sucesso!`,
-          "success"
-        );
-      }
     }
   };
 
@@ -165,6 +155,7 @@ const ProductsPage = ({ products, onAdd, onEdit, onDelete, showToast }) => {
             <span>Adicionar</span>
           </button>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -173,16 +164,16 @@ const ProductsPage = ({ products, onAdd, onEdit, onDelete, showToast }) => {
                   Nome
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                  Descrição
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Tipo
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Preço
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                  Promoção
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                  Validade
+                  Quantidade
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Ações
@@ -191,29 +182,48 @@ const ProductsPage = ({ products, onAdd, onEdit, onDelete, showToast }) => {
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {products.map((product) => (
-                <tr key={product.id} className="hover:bg-zinc-50 transition">
+                <tr key={product._id} className="hover:bg-zinc-50 transition">
                   <td className="px-4 py-4 text-sm font-medium text-zinc-900">
                     {product.name}
                   </td>
-                  <td className="px-4 py-4 text-sm text-zinc-600">
-                    {product.type}
+                  <td className="px-4 py-4 text-sm text-zinc-600 max-w-xs">
+                    <div className="truncate" title={product.description}>
+                      {product.description || "-"}
+                    </div>
                   </td>
-                  <td className="px-4 py-4 text-sm text-zinc-900 font-medium">
-                    R$ {product.price.toFixed(2)}
+                  <td className="px-4 py-4 text-sm text-zinc-600">
+                    {product.category || "-"}
                   </td>
                   <td className="px-4 py-4 text-sm">
-                    {product.promotionalPrice ? (
-                      <span className="text-emerald-600 font-medium">
-                        R$ {product.promotionalPrice.toFixed(2)}
-                      </span>
-                    ) : (
-                      <span className="text-zinc-400">—</span>
-                    )}
+                    <div className="flex flex-col">
+                      {product.hasPromotion ? (
+                        <>
+                          <span className="text-zinc-400 line-through text-xs">
+                            R$ {product.price.toFixed(2)}
+                          </span>
+                          <span className="text-emerald-600 font-bold">
+                            R$ {product.finalPrice.toFixed(2)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-zinc-900 font-medium">
+                          R$ {product.price.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-4 py-4 text-sm text-zinc-600">
-                    {new Date(product.expirationDate).toLocaleDateString(
-                      "pt-BR"
-                    )}
+                  <td className="px-4 py-4 text-sm">
+                    <span
+                      className={`${
+                        product.stock <= 0
+                          ? "text-red-600 font-medium"
+                          : product.stock <= 10
+                          ? "text-amber-600 font-medium"
+                          : "text-zinc-600"
+                      }`}
+                    >
+                      {product.stock}
+                    </span>
                   </td>
                   <td className="px-4 py-4 text-sm">
                     <div className="flex items-center space-x-2">
@@ -238,6 +248,17 @@ const ProductsPage = ({ products, onAdd, onEdit, onDelete, showToast }) => {
             </tbody>
           </table>
         </div>
+
+        {products.length === 0 && (
+          <div className="text-center py-16">
+            <Package
+              size={48}
+              className="mx-auto text-zinc-300 mb-3"
+              strokeWidth={1.5}
+            />
+            <p className="text-zinc-500">Nenhum produto cadastrado</p>
+          </div>
+        )}
       </div>
     </>
   );

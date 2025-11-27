@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Edit2,
@@ -10,17 +10,13 @@ import {
   Info,
   X,
   AlertTriangle,
-  Clock,
-  Calendar,
 } from "lucide-react";
-import { useEffect } from "react";
 
 const Toast = ({ message, type = "success", onClose, duration = 3000 }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
     }, duration);
-
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
@@ -108,33 +104,6 @@ const ConfirmModal = ({
   );
 };
 
-const calculateCustomerTime = (customerSinceDate) => {
-  const startDate = new Date(customerSinceDate);
-  const currentDate = new Date();
-
-  const years = currentDate.getFullYear() - startDate.getFullYear();
-  const months = currentDate.getMonth() - startDate.getMonth();
-
-  let totalMonths = years * 12 + months;
-
-  if (totalMonths < 1) {
-    return "Menos de 1 mês";
-  } else if (totalMonths < 12) {
-    return `${totalMonths} ${totalMonths === 1 ? "mês" : "meses"}`;
-  } else {
-    const fullYears = Math.floor(totalMonths / 12);
-    const remainingMonths = totalMonths % 12;
-
-    if (remainingMonths === 0) {
-      return `${fullYears} ${fullYears === 1 ? "ano" : "anos"}`;
-    } else {
-      return `${fullYears} ${
-        fullYears === 1 ? "ano" : "anos"
-      } e ${remainingMonths} ${remainingMonths === 1 ? "mês" : "meses"}`;
-    }
-  }
-};
-
 const CustomersPage = ({ customers, onAdd, onEdit, onDelete, onView }) => {
   const [toast, setToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState({
@@ -142,39 +111,32 @@ const CustomersPage = ({ customers, onAdd, onEdit, onDelete, onView }) => {
     customer: null,
   });
 
-  const showToast = (message, type = "success") => {
+  const showLocalToast = (message, type = "success") => {
     setToast({ message, type });
   };
 
   const handleAdd = () => {
     onAdd();
-    showToast("Abrindo formulário de cadastro", "info");
+    showLocalToast("Abrindo formulário de cadastro", "info");
   };
 
   const handleView = (customer) => {
     onView(customer);
-    showToast(`Visualizando detalhes de ${customer.name}`, "info");
+    showLocalToast(`Visualizando detalhes de ${customer.name}`, "info");
   };
 
   const handleEdit = (customer) => {
     onEdit(customer);
-    showToast(`Editando "${customer.name}"`, "info");
+    showLocalToast(`Editando "${customer.name}"`, "info");
   };
 
   const handleDeleteClick = (customer) => {
-    setConfirmModal({
-      isOpen: true,
-      customer,
-    });
+    setConfirmModal({ isOpen: true, customer });
   };
 
   const handleDeleteConfirm = () => {
     if (confirmModal.customer) {
       onDelete(confirmModal.customer);
-      showToast(
-        `Cliente "${confirmModal.customer.name}" excluído com sucesso!`,
-        "success"
-      );
     }
   };
 
@@ -218,7 +180,7 @@ const CustomersPage = ({ customers, onAdd, onEdit, onDelete, onView }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {customers.map((customer) => (
             <div
-              key={customer.id}
+              key={customer._id}
               className="border border-zinc-200 rounded-xl p-5 hover:border-zinc-300 transition"
             >
               <div className="flex items-start space-x-3 mb-4">
@@ -233,38 +195,23 @@ const CustomersPage = ({ customers, onAdd, onEdit, onDelete, onView }) => {
                   <h3 className="font-medium text-zinc-900 truncate">
                     {customer.name}
                   </h3>
-                  <p className="text-sm text-zinc-500">{customer.age} anos</p>
+                  <p className="text-sm text-zinc-500">{customer.email}</p>
                 </div>
               </div>
 
               <div className="space-y-2 mb-4">
-                <div className="flex items-center space-x-2 text-sm text-zinc-600">
-                  <span className="font-medium">CPF:</span>
-                  <span>{customer.cpf}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-zinc-600">
-                  <Clock
-                    size={14}
-                    strokeWidth={1.5}
-                    className="text-zinc-400"
-                  />
-                  <span className="text-xs">
-                    Cliente há {calculateCustomerTime(customer.customerSince)}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-zinc-600">
-                  <Calendar
-                    size={14}
-                    strokeWidth={1.5}
-                    className="text-zinc-400"
-                  />
-                  <span className="text-xs">
-                    Desde{" "}
-                    {new Date(customer.customerSince).toLocaleDateString(
-                      "pt-BR"
-                    )}
-                  </span>
-                </div>
+                {customer.cpf && (
+                  <div className="flex items-center space-x-2 text-sm text-zinc-600">
+                    <span className="font-medium">CPF:</span>
+                    <span>{customer.cpf}</span>
+                  </div>
+                )}
+                {customer.phone && (
+                  <div className="flex items-center space-x-2 text-sm text-zinc-600">
+                    <span className="font-medium">Tel:</span>
+                    <span>{customer.phone}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-2">
@@ -295,6 +242,17 @@ const CustomersPage = ({ customers, onAdd, onEdit, onDelete, onView }) => {
             </div>
           ))}
         </div>
+
+        {customers.length === 0 && (
+          <div className="text-center py-16">
+            <UserCircle
+              size={48}
+              className="mx-auto text-zinc-300 mb-3"
+              strokeWidth={1.5}
+            />
+            <p className="text-zinc-500">Nenhum cliente cadastrado</p>
+          </div>
+        )}
       </div>
     </>
   );
