@@ -1,55 +1,52 @@
-# Supermercado Bom Preço
+# Supermercado — Frontend
 
-Painel administrativo simples feito com React + Vite, estilizado com Tailwind CSS e ícones de `lucide-react`.
+Frontend em React para o painel administrativo do Supermercado (painel de gestão de usuários, produtos e clientes).
 
-## Tecnologias
-- Vite ([vite.config.js](vite.config.js))
-- React 19 ([src/main.jsx](src/main.jsx), [src/App.jsx](src/App.jsx))
-- React Router ([src/routes/AppRoutes.jsx](src/routes/AppRoutes.jsx), [src/routes/AuthenticatedLayout.jsx](src/routes/AuthenticatedLayout.jsx))
-- Tailwind CSS ([tailwind.config.js](tailwind.config.js), [postcss.config.js](postcss.config.js), [src/index.css](src/index.css))
-- Ícones: `lucide-react`
+Visão geral
+- SPA em React com rotas protegidas, autenticação via token JWT (armazenado em localStorage) e integração com a API backend.
+- Funcionalidades: login, listagem/CRUD de produtos, usuários e clientes, modais, toasts e validações básicas (CPF, telefone, senha).
 
-## Estrutura do projeto
+Arquivos principais
+- src/App.jsx — ponto de montagem da aplicação e carregamento inicial.
+- src/routes/AppRoutes.jsx — definição de rotas públicas e áreas autenticadas.
+- src/routes/AuthenticatedLayout.jsx — layout e lógica para usuários autenticados (sidebar, carregamento de dados).
+- src/pages/* — páginas: LoginPage, ProductsPage, UsersPage, CustomersPage.
+- src/components/* — Modal, Toast, Loading, ConfirmModal.
+- src/services/* — chamadas HTTP e lógica de integração com API (api.js, authService, userService, productService, customerService).
+- src/utils/validation.js — máscaras e validações (CPF, telefone, email, senha).
+- src/config/api.config.js — configuração da URL base da API.
+- .env — variáveis de ambiente
 
-Principais arquivos e pastas:
-- index.html
-- src/main.jsx
-- src/App.jsx — estado global inicial e rota principal
-- src/services/mockData.js — dados mock (users, products, customers)
-- src/utils/validation.js — máscaras e validações:
-  - maskCPF
-  - isValidCPF
-  - isValidEmail
-  - isStrongPassword
-  - getPasswordStrengthMessage
-  
-Rotas e layout:
-- AppRoutes — roteamento público/privado
-- AuthenticatedLayout — layout da área autenticada
+Requisitos
+- Node.js (>= 18 recomendado)
+- Backend do Supermercado rodando
 
-Páginas:
-- src/pages/LoginPage.jsx
-- src/pages/ProductsPage.jsx
-- src/pages/PromotionsPage.jsx
-- src/pages/UsersPage.jsx
-- src/pages/CustomersPage.jsx
-  
-Componentes principais:
-- Modal — formulário para adicionar/editar/visualizar Users, Customers e Products
-- AvatarUpload — uploader de avatar usado dentro do modal
-- Toast — Feedbacks
-- Loading — tela de loading
-- ConfirmModal — confirmação de exclusão
+Instalação e execução (local)
+1. Instalar dependências:
+   npm install
 
-## Fluxo e comportamento
-- Autenticação simples baseada em comparação com mockUsers. Credenciais de teste no login: bruno@super.com / Senha@123 (ver src/pages/LoginPage.jsx).
-- CRUD é mantido em memória via estado no src/App.jsx e passado para as páginas via props.
-- Modal de edição/visualização reutilizável: veja Modal e sua integração no AuthenticatedLayout.
-- Validações de formulário centralizadas em src/utils/validation.js.
+2. Verificar/ajustar .env (URL apontando para o backend).
 
-## Como rodar
-Instale dependências e rode em modo de desenvolvimento:
+3. Rodar em desenvolvimento:
+   - Se o projeto usa Create React App:
+     npm start
+   - Se usa Vite:
+     npm run dev
+   (Verifique os scripts em package.json)
 
-```bash
-npm install
-npm run dev
+4. Build para produção:
+   npm run build
+
+Observações técnicas
+- As requisições usam axios com um interceptor (src/services/api.js) que inclui o token em Authorization quando presente e redireciona para /login em 401.
+- Autenticação: token salvo em localStorage ("token"); dados do usuário em localStorage ("user").
+- Validações e máscaras no frontend estão em src/utils/validation.js — importantes para CPF e telefone.
+- Algumas permissões são tratadas no frontend (ex.: apenas admin/manager podem configurar preço promocional ou alterar roles). Regras finais devem ser validadas no backend.
+
+Boas práticas / dicas
+- Mantenha o backend em execução ao testar o frontend.
+- Para deploy, configure API_URL para a URL pública do backend antes de gerar o build.
+
+Recursos
+- API backend esperada: endpoints em /api/auth, /api/users, /api/products, /api/customers (consulte o README do backend para detalhes de rotas e autenticação).
+- Estrutura e nomes de campos esperados seguem os serviços em src/services/*.
