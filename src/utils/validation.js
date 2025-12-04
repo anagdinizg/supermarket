@@ -12,6 +12,24 @@ export const maskCPF = (value) => {
   return value;
 };
 
+export const maskPhone = (value) => {
+  if (!value) return "";
+
+  value = value.replace(/\D/g, "");
+
+  if (value.length <= 10) {
+    value = value.slice(0, 10);
+    value = value.replace(/(\d{2})(\d)/, "($1) $2");
+    value = value.replace(/(\d{4})(\d)/, "$1-$2");
+  } else {
+    value = value.slice(0, 11);
+    value = value.replace(/(\d{2})(\d)/, "($1) $2");
+    value = value.replace(/(\d{5})(\d)/, "$1-$2");
+  }
+
+  return value;
+};
+
 export const isValidCPF = (cpf) => {
   if (!cpf) return false;
 
@@ -63,4 +81,9 @@ export const getPasswordStrengthMessage = (password) => {
   if (messages.length === 0) return "Senha forte ✓";
 
   return `Falta: ${messages.join(", ")}`;
+};
+
+export const removeMask = (value) => {
+  if (!value) return "";
+  return value.replace(/\D/g, "");
 };

@@ -1,51 +1,90 @@
-import { useState } from "react";
-import { mockUsers, mockProducts, mockCustomers } from "./services/mockData";
-import AppRoutes from "./routes/appRoutes";
+import { useState, useEffect } from "react";
+import AppRoutes from "./routes/AppRoutes";
+import authService from "./services/authService";
+import userService from "./services/userService";
+import productService from "./services/productService";
+import customerService from "./services/customerService";
 
-const App = () => {
-  const [users, setUsers] = useState(mockUsers);
-  const [products, setProducts] = useState(mockProducts);
-  const [customers, setCustomers] = useState(mockCustomers);
+function App() {
   const [loggedUser, setLoggedUser] = useState(null);
-  const [toast, setToast] = useState({
-    show: false,
-    message: "",
-    type: "info",
-  });
-  const [modal, setModal] = useState({ show: false, type: "", data: null });
-  const [isLoading, setIsLoading] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [modal, setModal] = useState({ show: false, type: null, data: null });
+  const [toast, setToast] = useState(null);
 
-  const showToast = (message, type = "info") => {
-    setToast({ show: true, message, type });
-    setTimeout(
-      () => setToast({ show: false, message: "", type: "info" }),
-      3000
-    );
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
-  const handleLogin = (email, password) => {
-    const user = users.find(
-      (u) => u.email === email && u.password === password
-    );
-    if (user) {
-      setIsLoading(true);
-      setTimeout(() => {
-        setLoggedUser(user);
-        showToast(`Bem-vindo, ${user.name}!`, "success");
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (token) {
+          const userData = await authService.getMe();
+          setLoggedUser(userData);
+
+          await loadInitialData();
+        }
+      } catch (error) {
+        console.error("Erro ao verificar autenticação:", error);
+        authService.logout();
+      } finally {
         setIsLoading(false);
-      }, 1000);
-      return true;
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const loadInitialData = async () => {
+    try {
+      const [usersData, productsData, customersData] = await Promise.all([
+        userService.getAll().catch(() => []),
+        productService.getAll().catch(() => []),
+        customerService.getAll().catch(() => []),
+      ]);
+
+      setUsers(usersData);
+      setProducts(productsData);
+      setCustomers(customersData);
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
     }
-    return false;
   };
 
-  const handleLogout = (navigate) => {
+  const handleLogin = async (email, password) => {
+    try {
+      setIsLoading(true);
+      const userData = await authService.login(email, password);
+      setLoggedUser(userData.user);
+
+      await loadInitialData();
+
+      showToast("Login realizado com sucesso!", "success");
+      return true;
+    } catch (error) {
+      showToast(error, "error");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = async (navigate) => {
     setIsLoading(true);
     setTimeout(() => {
+      authService.logout();
       setLoggedUser(null);
-      navigate("/login");
+      setUsers([]);
+      setProducts([]);
+      setCustomers([]);
       setIsLoading(false);
-    }, 800);
+      if (navigate) navigate("/login");
+    }, 500);
   };
 
   return (
@@ -62,11 +101,10 @@ const App = () => {
       modal={modal}
       setModal={setModal}
       toast={toast}
-      setToast={setToast}
       showToast={showToast}
       isLoading={isLoading}
     />
   );
-};
+}
 
 export default App;
