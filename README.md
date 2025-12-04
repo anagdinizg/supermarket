@@ -8,7 +8,6 @@ Painel administrativo simples feito com React + Vite, estilizado com Tailwind CS
 - React Router ([src/routes/AppRoutes.jsx](src/routes/AppRoutes.jsx), [src/routes/AuthenticatedLayout.jsx](src/routes/AuthenticatedLayout.jsx))
 - Tailwind CSS ([tailwind.config.js](tailwind.config.js), [postcss.config.js](postcss.config.js), [src/index.css](src/index.css))
 - Ícones: `lucide-react`
-- Dados de exemplo: [src/services/mockData.js](src/services/mockData.js)
 
 ## Estrutura do projeto
 
